@@ -71,7 +71,7 @@ def productoras(productora:str):
     for i in range(len(lista)):
         if lista[i] is None:
             continue
-        if lista[i] is not list and list[i] == productora:
+        if type(lista[i]) is not list and list[i] == productora:
             cantidad += 1
             ganancia = df["revenue"][i]
             ganancia_total += ganancia
