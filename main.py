@@ -1,8 +1,13 @@
-from fastapi import FastAPI
+#importamos las librerias requeridas
 import pandas as pd
-import numpy as np
+from fastapi import FastAPI 
 import ast
 import locale
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.utils.extmath import randomized_svd
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 app = FastAPI(title='Proyecto Individual',
               description='Data 10',
             )
@@ -23,6 +28,25 @@ async def about():
     return {'Proyecto Individual de la cohorte 10 de Data Science'}
 
 df = pd.read_csv("./movies.csv",encoding='utf-8')
+
+# Vectorizador TfidfVectorizer con parámetros de reduccion procesamiento
+df['genres'].fillna('', inplace=True)
+vectorizer = TfidfVectorizer(min_df=10, max_df=0.5, ngram_range=(1,2))
+
+# Vectorizar, ajustar y transformar el texto de la columna "title" del DataFrame
+X = vectorizer.fit_transform(df['genres'])
+
+# Calcular la matriz de similitud de coseno con una matriz reducida de 7000
+similarity_matrix = cosine_similarity(X[:1250,:])
+
+# Obtener la descomposición en valores singulares aleatoria de la matriz de similitud de coseno con 10 componentes
+n_components = 10
+U, Sigma, VT = randomized_svd(similarity_matrix, n_components=n_components)
+
+# Construir la matriz reducida de similitud de coseno
+reduced_similarity_matrix = U.dot(np.diag(Sigma)).dot(VT)
+
+
 
 @app.get('/peliculas_mes/{mes}')
 def peliculas_mes(mes:str):
@@ -93,7 +117,17 @@ def retorno(pelicula:str):
     year = df["release_year"][df["title"] == pelicula].item()
     return {'pelicula':pelicula,'inversion':inversion,'ganancia':ganancia,'retorno':retorno_dos,'anio':year}
 
-# @app.get('/recomendacion/{titulo}')
-# def recomendacion(titulo:str):
-#     '''Ingresas un nombre de pelicula y te recomienda las similares en una lista'''
-#     return {'lista recomendada': respuesta}
+@app.get('/recomendacion/{titulo}')
+def recomendacion(titulo:str):
+    '''Ingresas un nombre de pelicula y te recomienda las similares en una lista'''
+    #Ubicamos el indice del titulo pasado como parametro en la columna 'title' del dts user_item
+    indice = np.where(df['title'] == titulo)[0][0]
+    #Encontramos los indices de las puntuaciones y caracteristicas similares del titulo 
+    puntuaciones_similitud = reduced_similarity_matrix[indice,:]
+    # Se ordena los indicies de menor a mayor
+    puntuacion_ordenada = np.argsort(puntuaciones_similitud)[::-1]
+    # Que solo 5 nos indique 
+    top_indices = puntuacion_ordenada[:5]
+    
+    return df.loc[top_indices, 'title'].tolist()
+   
