@@ -29,17 +29,17 @@ async def about():
 
 df = pd.read_csv("./movies.csv",encoding='utf-8')
 
-# Vectorizador TfidfVectorizer con parámetros de reduccion procesamiento
+# El Vectorizador TfidfVectorizer con parámetros de reduccion procesamiento
 df['genres'].fillna('', inplace=True)
-vectorizer = TfidfVectorizer(min_df=10, max_df=0.5, ngram_range=(1,2))
+vectorizar = TfidfVectorizer(min_df=10, max_df=0.5, ngram_range=(1,2))
 
-# Vectorizar, ajustar y transformar el texto de la columna "title" del DataFrame
-X = vectorizer.fit_transform(df['genres'])
+# Vectorizamos, ajustamos y transformamos el texto de la columna "title" del DataFrame
+X = vectorizar.fit_transform(df['genres'])
 
 # Calcular la matriz de similitud de coseno con una matriz reducida de 7000
 similarity_matrix = cosine_similarity(X[:1250,:])
 
-# Obtener la descomposición en valores singulares aleatoria de la matriz de similitud de coseno con 10 componentes
+# Obtenemos la descomposición en valores singulares aleatoria de la matriz de similitud de coseno con 10 componentes
 n_components = 10
 U, Sigma, VT = randomized_svd(similarity_matrix, n_components=n_components)
 
@@ -120,9 +120,10 @@ def retorno(pelicula:str):
 @app.get('/recomendacion/{titulo}')
 def recomendacion(titulo:str):
     '''Ingresas un nombre de pelicula y te recomienda las similares en una lista'''
+    titulo = titulo.title()
     #Ubicamos el indice del titulo pasado como parametro en la columna 'title' del dts user_item
     indice = np.where(df['title'] == titulo)[0][0]
-    #Encontramos los indices de las puntuaciones y caracteristicas similares del titulo 
+    #Vemos los indices de aquellas puntuaciones y caracteristicas similares hacia el titulo 
     puntuaciones_similitud = reduced_similarity_matrix[indice,:]
     # Se ordena los indicies de menor a mayor
     puntuacion_ordenada = np.argsort(puntuaciones_similitud)[::-1]
